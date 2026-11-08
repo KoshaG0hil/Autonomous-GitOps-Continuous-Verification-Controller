@@ -1,0 +1,60 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xsecurecloudinfrastructures.infrastructure.aws.internal
+spec:
+  group: infrastructure.aws.internal
+  names:
+    kind: XSecureCloudInfrastructure
+    plural: xsecurecloudinfrastructures
+  claimNames:
+    kind: SecureCloudInfrastructure
+    plural: securecloudinfrastructures
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - region
+                - environment
+              properties:
+                region:
+                  type: string
+                environment:
+                  type: string
+                enableCanaryRollback:
+                  type: boolean
+                  default: true
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: composite-secure-infrastructure
+spec:
+  compositeTypeRef:
+    apiVersion: infrastructure.aws.internal/v1alpha1
+    kind: XSecureCloudInfrastructure
+  resources:
+    - name: eks-cluster
+      base:
+        apiVersion: eks.aws.upbound.io/v1beta1
+        kind: Cluster
+        spec:
+          forProvider:
+            version: "1.30"
+    - name: s3-storage-vault
+      base:
+        apiVersion: s3.aws.upbound.io/v1beta1
+        kind: Bucket
+        spec:
+          forProvider:
+            serverSideEncryptionConfiguration:
+              rule:
+                applyServerSideEncryptionByDefault:
+                  sseAlgorithm: aws:kms
